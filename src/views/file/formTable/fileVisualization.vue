@@ -22,7 +22,7 @@
         <CatelogueTreeMap :data="treeData" />
       </template>
       <template v-if="currentKey == 'cluster'">
-        <div v-for="i in 10" :key="i">这是用户{{ fileName }}操作日志Tab</div>
+        <ClusterVisualization :data="clusterData" />
       </template>
     </div>
   </PageWrapper>
@@ -35,10 +35,13 @@
   import { useGo } from '/@/hooks/web/usePage';
   import { useTabs } from '/@/hooks/web/useTabs';
   import { Tabs } from 'ant-design-vue';
+  import { getProjectFile } from '/@/api/file/file';
   import { getCatalogueDatasList, getCatalogueTreeMapDatas } from '/@/api/file/catelogueData';
+  import { getClusterDatasList } from '/@/api/file/clusterData';
   import CatelogueVisualization from './components/catelogue/catelogueVisualization.vue';
   import CatelogueTreeMap from './components/catelogue/catelogueTreeMap.vue';
   import CatelogueCirclePack from './components/catelogue/catelogueCirclePack.vue';
+  import ClusterVisualization from './components/cluster/clusterVisualiztion.vue';
   export default defineComponent({
     name: 'FileVisualization',
     components: {
@@ -48,6 +51,7 @@
       CatelogueVisualization,
       CatelogueCirclePack,
       CatelogueTreeMap,
+      ClusterVisualization,
     },
     setup() {
       const route = useRoute();
@@ -55,8 +59,9 @@
       // 此处可以得到用户ID
       const fileId = ref(route.params?.id);
       const fileName = ref('');
-      const currentKey = ref('catelogueCirclePack');
+      const currentKey = ref('cluster');
       const { setTitle } = useTabs();
+      const clusterData = ref();
       const datas = ref();
       const treeData = ref();
 
@@ -70,12 +75,12 @@
       }
 
       onMounted(() => {
-        // getProjectFile(fileId.value).then((res) => {
-        //   fileName.value = res.input_name;
-        //   return {
-        //     fileName,
-        //   };
-        // });
+        getProjectFile(fileId.value).then((res) => {
+          fileName.value = res.file_name;
+          return {
+            fileName,
+          };
+        });
         getCatalogueDatasList(fileId.value).then((res) => {
           datas.value = res[0];
           return {
@@ -88,9 +93,15 @@
             treeData,
           };
         });
+        getClusterDatasList(fileId.value).then((res) => {
+          clusterData.value = res[0];
+          return {
+            clusterData,
+          };
+        });
       });
 
-      return { fileName, datas, currentKey, goBack, treeData };
+      return { fileName, clusterData, datas, currentKey, goBack, treeData };
     },
   });
 </script>
