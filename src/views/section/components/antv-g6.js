@@ -1684,24 +1684,22 @@ export const drawChart = function (data1, data2) {
 
   const modes = [];
   data.nodes.forEach((node) => {
-    if (modes.indexOf(node.mode[0]) === -1) modes.push(node.mode[0]);
-    node.mode = node.mode[0];
+    const temp = node.mode.split(',');
+    if (modes.indexOf(temp[0]) === -1) modes.push(temp[0]);
+    node.mode = temp[0];
   });
-  const tempNodes = d3
-    .nest()
-    .key((e) => e.mode)
-    .map(data.nodes);
+  const tempNodes = d3.groups(data.nodes, (e) => e.mode);
   const tempModeMap = {};
-  Object.keys(tempNodes).forEach((tempNode) => {
-    const key = tempNode.substring(1);
+  tempNodes.forEach((tempNode) => {
+    const key = tempNode[0];
     clusteredData.clusters.push({
       id: key,
-      nodes: tempNodes[tempNode].map((d) => ({
+      nodes: tempNode[1].map((d) => ({
         ...d,
         clusterId: key,
       })),
     });
-    tempNodes[tempNode].forEach((d) => {
+    tempNode[1].forEach((d) => {
       tempModeMap[d.id] = d.mode;
     });
   });

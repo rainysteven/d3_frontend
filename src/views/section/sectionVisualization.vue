@@ -67,7 +67,7 @@
       // 此处可以得到文件ID
       const fileId = ref(route.params?.id);
       const fileName = ref('');
-      const currentKey = ref('sunburst');
+      const currentKey = ref('chord');
       const { setTitle } = useTabs();
       const nodeDatas = ref();
       const edgeDatas = ref();

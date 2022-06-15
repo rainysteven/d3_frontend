@@ -47,6 +47,7 @@ export const drawChart = function (nodes, edges, radioProps, sliderProps, zoomPr
     radio_isNotHonor,
     unions,
   } = figureData;
+  console.log(cantidades_isHonor);
   const cantidades_isHonor_sum = Object.entries(cantidades_isHonor).map((d) =>
     d3.sum(Object.values(d[1])),
   );
@@ -132,8 +133,8 @@ export const drawChart = function (nodes, edges, radioProps, sliderProps, zoomPr
   // 鼠标事件
   handleMouseEvent(radioProps.radioValue, sliderProps.sliderValue);
 
-  const zoomed = function () {
-    g.attr('transform', d3.event.transform);
+  const zoomed = function (event, d) {
+    g.attr('transform', event.transform);
   };
 
   const zoom = d3
@@ -178,9 +179,6 @@ export const changeLinksBySlider = function (radioValue, sliderValue) {
     .selectAll('.link')
     .style('opacity', 0)
     .filter((d) => {
-      console.log(
-        d.type === radioValue && d3.sum(Object.values(d.object_cantidad)) === sliderValue,
-      );
       return d.type === radioValue && d3.sum(Object.values(d.object_cantidad)) === sliderValue;
     })
     .style('opacity', 1);
@@ -208,9 +206,9 @@ const datas = function (nodes, edges) {
   );
   let nodesObject = {};
   nodesNestArray.forEach((e) => {
-    nodesObject[e.key] = e.values.map((d) => ({
-      name: d.key,
-      values: d.values,
+    nodesObject[e[0]] = e[1].map((d) => ({
+      name: d[0],
+      values: d[1],
     }));
   });
   if (nodesObject[1].length > nodesObject[0].length) {
@@ -222,32 +220,40 @@ const datas = function (nodes, edges) {
   }
 
   // 边信息
-  const edgesNestArray = d3
-    .nest()
-    .key((d) => d.sourceIsHonor)
-    .key((d) => d.sourcePackageName)
-    .rollup((d) =>
-      d3
-      .nest()
-      .key((d) => d.targetIsHonor)
-      .key((d) => d.targetPackageName)
-      .entries(d)
-      .map((e) => ({
-        name: e.key,
-        values: e.values.map((f) => f.key),
-      })),
-    )
-    .entries(edges);
+  // const edgesNestArray = d3
+  //   .nest()
+  //   .key((d) => d.sourceIsHonor)
+  //   .key((d) => d.sourcePackageName)
+  //   .rollup((d) =>
+  //     d3
+  //     .nest()
+  //     .key((d) => d.targetIsHonor)
+  //     .key((d) => d.targetPackageName)
+  //     .entries(d)
+  //     .map((e) => ({
+  //       name: e.key,
+  //       values: e.values.map((f) => f.key),
+  //     })),
+  //   )
+  //   .entries(edges);
+  const edgesNestArray = d3.rollups(
+    edges,
+    (v) =>
+    d3.groups(
+      v,
+      (d) => d.targetIsHonor,
+      (d) => d.targetPackageName,
+    ),
+    (d) => d.sourceIsHonor,
+    (d) => d.sourcePackageName,
+  );
   let edgesObject = {};
   edgesNestArray.forEach((d) => {
-    edgesObject[d.key] = d.values.map((e) => ({
-      name: e.key,
-      values: e.value,
+    edgesObject[d[0] === 0 ? 'isNotHonor' : 'isHonor'] = d[1].map((e) => ({
+      name: e[0],
+      values: e[1],
     }));
   });
-  edgesObject = JSON.parse(
-    JSON.stringify(edgesObject).replace(/0/g, 'isNotHonor').replace(/1/g, 'isHonor'),
-  );
 
   // 初始化
   const cantidad_isHonor = nodesObject[1].length,
@@ -286,11 +292,10 @@ const datas = function (nodes, edges) {
   edgesObject.isHonor.forEach((d) => {
     const source = result_isHonor.coordenadas[d.name];
     d.values.forEach((v) => {
-      v.values.forEach((e) => {
+      v[1].forEach((e) => {
         const target =
-          v.name === 'isNotHonor' ?
-          result_isNotHonor.coordenadas[e] :
-          result_isHonor.coordenadas[e];
+          v[0] === 0 ? result_isNotHonor.coordenadas[e[0]] : result_isHonor
+          .coordenadas[e[0]];
         const ruta = linker({
           source_x: source.x,
           source_y: source.y,
@@ -376,7 +381,7 @@ const generate_circulos = function (
   origin_edge_data.forEach((d) => {
     const object = {};
     d.values.forEach((e) => {
-      object[e.name] = e.values.length;
+      object[e[0]] = e[1].length;
     });
     cantidades[d.name] = object;
   });
@@ -434,7 +439,7 @@ const handleMouseEvent = function (radioValue, sliderValue) {
   const pathFilter = (e) =>
     e.type === radioValue && d3.sum(Object.values(e.object_cantidad)) === sliderValue;
   circle
-    .on('mouseover', (d) => {
+    .on('mouseover', (event, d) => {
       circle.filter((e) => !circleFilter(d, e)).attr('opacity', 0.1);
       text.filter((e) => !circleFilter(d, e)).attr('opacity', 0.1);
       link
@@ -443,12 +448,10 @@ const handleMouseEvent = function (radioValue, sliderValue) {
         .style('opacity', (e) =>
           !e.list_relacion.filter((f) => f[0] === d.name && f[1] === d.type).length ? 0.1 : 1,
         );
-      console.log(d3.event);
-      tooltip.style('left', d3.event.layerX + 25 + 'px').style('top', d3.event.layerY + 70 +
-        'px');
+      tooltip.style('left', event.layerX + 25 + 'px').style('top', event.layerY + 70 + 'px');
       tooltip.style('visibility', 'visible').text(d.name);
     })
-    .on('mouseout', function (d) {
+    .on('mouseout', function (event, d) {
       circle.filter((e) => !circleFilter(d, e)).attr('opacity', 1);
       text.filter((e) => !circleFilter(d, e)).attr('opacity', 1);
       link
@@ -457,10 +460,11 @@ const handleMouseEvent = function (radioValue, sliderValue) {
         .style('opacity', 1);
       tooltip.style('visibility', 'hidden');
     });
-  const linkFilter = (d, e) =>
-    !d.list_relacion.filter((f) => f[0] === e.name && f[1] === e.type).length;
+  const linkFilter = (d, e) => {
+    return !d.list_relacion.filter((f) => f[0] === e.name && f[1] === e.type).length;
+  };
   link
-    .on('mouseover', (d) => {
+    .on('mouseover', (event, d) => {
       if (pathFilter(d)) {
         circle.filter((e) => linkFilter(d, e)).attr('opacity', 0.1);
         text.filter((e) => linkFilter(d, e)).attr('opacity', 0.1);
@@ -470,7 +474,7 @@ const handleMouseEvent = function (radioValue, sliderValue) {
           .style('opacity', (e) => (e.list_relacion !== d.list_relacion ? 0.1 : 1));
       }
     })
-    .on('mouseout', (d) => {
+    .on('mouseout', (event, d) => {
       circle.filter((e) => linkFilter(d, e)).attr('opacity', 1);
       text.filter((e) => linkFilter(d, e)).attr('opacity', 1);
       link

@@ -18,7 +18,6 @@
     setup(props) {
       const { nodes, edges } = toRefs(props);
       watch(edges, () => {
-        console.log(nodes.value);
         drawChart(nodes.value, edges.value);
       });
     },
