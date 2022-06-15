@@ -86,6 +86,11 @@ const sunburst = function (
     (d) => d.packageName,
     (d) => d.isHonor,
   );
+  const fileMap = d3.groups(
+    nodes,
+    (d) => d.isHonor,
+    (d) => d.File,
+  );
   const width = 800;
   const radius = width / 2;
   const root = partition(buildPackageHierarchy(nodes), radius);
@@ -235,8 +240,8 @@ const sunburst = function (
   };
   const arcs = buildArcs(g, data);
   // 绘制文件旭日图
-  const drawFile = (data, edges, color, fileNamesFunc) => {
-    const [fileNodes, fileEdges] = buildFileData(data, edges);
+  const drawFile = (data, tempEdges, color, fileNamesFunc) => {
+    const [fileNodes, fileEdges] = buildFileData(data, tempEdges);
     fileNodes
       .descendants()
       .slice(1)
@@ -289,7 +294,8 @@ const sunburst = function (
       .attr('r', (d) => d.r)
       .attr('fill', (d) => (d.children ? 'white' : color(d)))
       .attr('stroke', (d) => (d.depth === 1 ? colorList[d.data.isOri ? 0 : 1] : 'black'))
-      .attr('stroke-width', (d) => (d.depth === 1 ? 1 : 0.5));
+      .attr('stroke-width', (d) => (d.depth === 1 ? 1 : 0.5))
+      .attr('cursor', 'pointer');
     const drawPath = (d) =>
       `M${d.x - d.r - 1},${d.y} A${d.r},${d.r} 0 0 1 ${d.x + d.r + 1},${d.y}`;
     nodeGroups
@@ -394,7 +400,6 @@ const sunburst = function (
               }
             });
           });
-          console.log(idArray);
           nodeGroups
             .filter((d) => !d.children)
             .attr('opacity', 0.1)
@@ -408,6 +413,27 @@ const sunburst = function (
         .on('mouseout', () => {
           nodeGroups.attr('opacity', 1);
           linkGroups.attr('opacity', 1);
+        })
+        .on('click', (event, v) => {
+          let [file, isOri] = v.data.id.split('_');
+          file = file.replaceAll('.', '/');
+          isOri = parseInt(isOri);
+          const fileArray = fileMap.filter((e) => e[0] === isOri)[0][1],
+            filePattern = new RegExp(`.*${file}..*`);
+          let fileResult = fileArray.filter((e) => filePattern.exec(e[0]))[0][1];
+          const tempArray = fileResult.map((e) => e._id);
+          let idRelations = tempEdges
+            .map((e) => e.idDirection)
+            .reduce((a, b) => a.concat(b))
+            .map((e) => e.split('->'))
+            .filter((e) => e.filter((d) => tempArray.includes(parseInt(d))).length)
+            .reduce((a, b) => a.concat(b));
+          idRelations = Array.from(new Set(idRelations)).map((d) => parseInt(d));
+          idRelations = Array.from(new Set([...tempArray, ...idRelations]));
+          const nodeResult = nodes.filter((e) => idRelations.includes(e._id)),
+            edgeResult = edges.filter(
+              (e) => idRelations.includes(e.source) && idRelations.includes(e.target),
+            );
         });
     };
     const {
@@ -440,7 +466,6 @@ const sunburst = function (
       value: d[0],
       label: d[1],
     }));
-    console.log(selectProps.fileTypes);
     selectProps.fileNamesObject = Object.fromEntries(Object.keys(textObject).map((d) => [d,
     []]));
     drawLegend(colorList, Object.values(textObject));
@@ -584,7 +609,7 @@ const sunburst = function (
 
   let legnedArray = [];
 
-  const changeBySelect = function (checkboxValue, sourceProps, switchProps) {
+  const changeBySelect = (checkboxValue, sourceProps, switchProps) => {
     const {
       source,
       target,
@@ -599,11 +624,11 @@ const sunburst = function (
         .attr('display', 'block')
         .attr('opacity', 1);
     };
-    const nodesFunc = function (selection) {
+    const nodesFunc = (selection) => {
       selection
         .filter((d) => d.depth >= 2)
         .on('mouseover', (event, e) => {
-          const mouseOverEvent = function (selection) {
+          const mouseOverEvent = (selection) => {
             selection
               .attr('opacity', 0.1)
               .filter(
@@ -954,9 +979,8 @@ const buildFileData = function (data, edges) {
     })
     .sum((d) => d.value)
     .sort((a, b) => b.value - a.value);
-  const filterFunc = (key, d, e) => {
-    return d[key] === e.data.qualifiedName && d[`${key}IsOri`] === (e.data.isOri ? 0 : 1);
-  };
+  const filterFunc = (key, d, e) =>
+    d[key] === e.data.qualifiedName && d[`${key}IsOri`] === (e.data.isOri ? 0 : 1);
   hierarchyData.each((e) => {
     if (!e.children) {
       const relation = {
@@ -1056,13 +1080,22 @@ const buildEdges = function (edges, objectByNameArray) {
       if (Array.isArray(e[1])) {
         convert(e[1], store, type);
       } else {
-        store.push({
+        const object = {
           source: e[`source${type}`],
           target: e[`target${type}`],
           sourceIsOri: e.sourceIsHonor,
           targetIsOri: e.targetIsHonor,
           value: e[`${type === 'File' ? 'file' : 'package'}Value`],
-        });
+        };
+        store.push(
+          type === 'File' ?
+          {
+            ...object,
+            direction: `${object.source}_${object.sourceIsOri}->${object.target}_${object.targetIsOri}`,
+            idDirection: [`${e.source}->${e.target}`],
+          } :
+          object,
+        );
       }
     });
   };
@@ -1071,6 +1104,17 @@ const buildEdges = function (edges, objectByNameArray) {
   newFileEdges = Array.from(new Set(newFileEdges.map((e) => JSON.stringify(e)))).map((e) =>
     JSON.parse(e),
   );
+  newFileEdges = d3
+    .rollups(
+      newFileEdges,
+      (e) => ({
+        ...e[0],
+        idDirection: Array.from(new Set(e.map((d) => d.idDirection).reduce((a, b) => a.concat(
+          b)))),
+      }),
+      (d) => d.direction,
+    )
+    .map((d) => d[1]);
   newPackageEdges = Array.from(new Set(newPackageEdges.map((e) => JSON.stringify(e)))).map((e) =>
     JSON.parse(e),
   );

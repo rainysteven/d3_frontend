@@ -6,7 +6,6 @@
     <template #footer>
       <a-tabs default-active-key="detail" v-model:activeKey="currentKey">
         <a-tab-pane key="chord" tab="和弦图" />
-        <a-tab-pane key="section" tab="弦图" />
         <a-tab-pane key="cluster" tab="切面图" />
         <a-tab-pane key="arc" tab="arc" />
         <a-tab-pane key="sunburst" tab="旭日图" />
@@ -15,9 +14,6 @@
     <div class="pt-4 m-4 desc-wrap">
       <template v-if="currentKey == 'chord'">
         <SectionChord :nodes="nodeDatas" :edges="edgeDatas" />
-      </template>
-      <template v-if="currentKey == 'section'">
-        <SectionChart :nodes="nodeDatas" :edges="edgeDatas" />
       </template>
       <template v-if="currentKey == 'cluster'">
         <SectionD3Chart :nodes="nodeDatas" :edges="edgeDatas" />
@@ -44,7 +40,6 @@
     getSectionNodesList,
     getSectionEdgesList,
   } from '/@/api/section/section';
-  import SectionChart from './components/sectionEChart.vue';
   import SectionD3Chart from './components/sectionD3.vue';
   import SectionArc from './components/sectionArc.vue';
   import SectionChord from './components/sectionChord.vue';
@@ -56,7 +51,6 @@
       ATabs: Tabs,
       ATabPane: Tabs.TabPane,
       SectionArc,
-      SectionChart,
       SectionD3Chart,
       SectionChord,
       SectionSunburst,
@@ -67,7 +61,7 @@
       // 此处可以得到文件ID
       const fileId = ref(route.params?.id);
       const fileName = ref('');
-      const currentKey = ref('chord');
+      const currentKey = ref('sunburst');
       const { setTitle } = useTabs();
       const nodeDatas = ref();
       const edgeDatas = ref();
