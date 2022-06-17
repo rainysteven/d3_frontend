@@ -3,66 +3,67 @@ import * as $ from 'jquery';
 import * as echarts from 'echarts';
 
 export const getData = function (datas) {
-  const fileData = [],
-    categoryData = {};
+  const fileData = [];
   fileData.push({
     value: 'root',
   });
-  categoryData['root'] = [];
   datas.children.map(function (data) {
     fileData.push({
       value: data.name,
       label: data.name.replace(/^(.*)android\//i, ''),
     });
-    categoryData[data.name] = (function () {
-      const arr = [];
-      Object.keys(data.relation).forEach(function (key) {
-        arr.push(key);
-      });
-      return arr;
-    })();
   });
-  return [fileData, categoryData];
+  return fileData;
 };
 
-const figureData = function (datas) {
-  let barData = [];
+const figureData = (datas) => {
+  let barData = [],
+    changeData = [];
+  const idNameMap = {};
+  datas.children.forEach((d) => [(idNameMap[d._id] = d.name)]);
   const result = datas.children.map(function (data) {
-    return {
+    const item = {
       id: data.id.toString(),
       name: data.name,
       color: data.color,
-      children: (function () {
+    };
+    if (data.cells) {
+      item.children = (() => {
         let arr = [];
-        Object.keys(data.relation).forEach(function (key) {
+        Object.entries(data.cells).forEach((e) => {
+          const temp_id = `${data.id}_target_${e[0]}`;
           arr.push({
-            id: `${data.id}_${key}`,
-            name: `${data.name}/${key}`,
-            size: data.value / 10,
-            // relation: (function () {
-            //   let temp = [];
-            //   Object.keys(data.relation[key]).forEach(function (s) {
-            //     temp.push({
-            //       operate: s,
-            //       number: data.relation[key][s],
-            //     });
-            //   });
-            //   return temp;
-            // })(),
+            id: temp_id,
+            name: `target_${idNameMap[e[0]]}`,
+            size: data.value / 15,
           });
-          Object.keys(data.relation[key]).forEach(function (s) {
+          Object.entries(e[1]).forEach((d) => {
             barData.push({
-              id: `${data.id}_${key}`,
-              operate: s,
-              number: data.relation[key][s],
+              id: temp_id,
+              operate: d[0],
+              number: d[1],
+            });
+          });
+        });
+        Object.entries(data.relation).forEach(function (d) {
+          Object.entries(d[1]).forEach(function (s) {
+            changeData.push({
+              id: `${data.id}_${d[[0]]}`,
+              parentId: `${data.id}`,
+              operate: s[0],
+              number: s[1],
             });
           });
         });
         return arr;
-      })(),
-    };
+      })();
+    } else {
+      item.size = data.value;
+    }
+    return item;
   });
-  return [result, barData];
+  changeData = d3.group(changeData, (d) => d.parentId);
+  return [result, barData, changeData];
 };
 
 export const drawChart = function (temp, params) {
@@ -84,7 +85,7 @@ export const drawChart = function (temp, params) {
     .style('border', '1px solid grey')
     .style('pointer-events', 'none');
   // 初始化
-  let [data, barData] = figureData(temp);
+  let [data, barData, changeData] = figureData(temp);
   const [padding, width, height] = [5, 1440, 768];
   const [centerX, centerY] = [width / 2, height / 2];
   const canvas = d3
@@ -170,7 +171,7 @@ export const drawChart = function (temp, params) {
     (d) => d.id,
   );
   barData = d3.groups(barData, (d) => d.id);
-  let dataById = {};
+  const dataById = {};
   barData.forEach((d, i) => {
     dataById[d[0]] = i;
   });
@@ -202,6 +203,8 @@ export const drawChart = function (temp, params) {
           node.data.color ?
           node.data.color :
           colorScaleByDepth(node.depth) :
+          !node.data.name.includes('target') ?
+          node.data.color :
           'white';
       }
       const nodeX = (node.x - zoomInfo.centerX) * zoomInfo.scale + centerX,
@@ -381,7 +384,7 @@ export const drawChart = function (temp, params) {
       node.height === 1 ?
       {
         height: 1,
-        datas: node.children.map((e) => barData[dataById[e.data.id]]),
+        datas: changeData.get(node.data.id),
       } :
       {
         height: node.height,
@@ -433,7 +436,7 @@ export const drawChart = function (temp, params) {
     tooltip.style('opacity', 0);
     if (node !== nodeOld) {
       if (node) {
-        if (node.depth !== 0) {
+        if (node.depth !== 0 && !node.data.name.includes('target')) {
           const nodeX = (node.x - zoomInfo.centerX) * zoomInfo.scale + centerX,
             nodeY = (node.y - zoomInfo.centerY) * zoomInfo.scale + centerY,
             nodeR = node.r * zoomInfo.scale;
@@ -458,20 +461,17 @@ export const drawChart = function (temp, params) {
     timeElapsed = 0, //Starting duration
     vOld = [focus.x, focus.y, focus.r * 2.05];
 
+  console.log(IDbyName);
+
   function zoomToCanvas(focusNode) {
     $('#canvas').css('pointer-events', 'none');
-    //Remove all previous popovers - if present
-    // $('.popoverWrapper').remove();
-    // $('.popover').each(function () {
-    //   $('.popover').remove();
-    // });
+    console.log(focusNode);
     if (focusNode === focus) {
       currentID = '';
     } else {
       if (typeof IDbyName[focusNode.data.name] !== 'undefined') {
         const temp = IDbyName[focusNode.data.name];
-        const index = temp.indexOf('_');
-        currentID = index === -1 ? temp : temp.substring(0, index);
+        currentID = temp.split('_')[0];
       } else {
         currentID = 'root';
       }
@@ -750,17 +750,18 @@ export const drawRootClusters = function (datas) {
 };
 
 export const drawNodeClusters = function (datas) {
-  const categoryType = ['nochange', 'delete', 'insert'];
+  const parentId = datas.datas[0].parentId;
+  const categoryType = Array.from(new Set(datas.datas.map((d) => d.operate)));
   const colorBar = d3.scaleOrdinal().domain(categoryType).range(['#EFB605', '#E3690B',
   '#CF003E']);
-  const yAxisData = datas.datas.map((e) => e[0].split('_')[1]);
+  const yAxisData = Array.from(new Set(datas.datas.map((e) => e.id.split('_')[1])));
+  const groups = d3.group(datas.datas, (d) => d.id);
   const seriesData = {};
-  categoryType.forEach((e) => {
-    seriesData[e] = datas.datas.map((d) =>
-      !d[1].filter((c) => c.operate === e).length ?
-      0 :
-      d[1].filter((c) => c.operate === e)[0].number,
-    );
+  categoryType.forEach((v) => {
+    seriesData[v] = yAxisData.map((e) => {
+      const tempArray = groups.get(`${parentId}_${e}`).filter((d) => d.operate === v);
+      return !tempArray.length ? 0 : tempArray[0].number;
+    });
   });
   const chartDom = document.getElementById('clusters');
   let myChart = echarts.getInstanceByDom(chartDom);

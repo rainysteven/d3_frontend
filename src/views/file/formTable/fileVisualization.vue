@@ -13,7 +13,7 @@
     </template>
     <div class="pt-4 m-4 desc-wrap">
       <template v-if="currentKey == 'catelogue'">
-        <CatelogueVisualization :data="datas" />
+        <CatelogueVisualization :data="datas" :edges="edges" />
       </template>
       <template v-if="currentKey == 'catelogueCirclePack'">
         <CatelogueCirclePack :data="treeData" />
@@ -38,6 +38,7 @@
   import { getProjectFile } from '/@/api/file/file';
   import { getCatalogueDatasList, getCatalogueTreeMapDatas } from '/@/api/file/catelogueData';
   import { getClusterDatasList } from '/@/api/file/clusterData';
+  import { getProjectFileEdgesList } from '/@/api/file/fileEdge';
   import CatelogueVisualization from './components/catelogue/catelogueVisualization.vue';
   import CatelogueTreeMap from './components/catelogue/catelogueTreeMap.vue';
   import CatelogueCirclePack from './components/catelogue/catelogueCirclePack.vue';
@@ -59,11 +60,12 @@
       // 此处可以得到用户ID
       const fileId = ref(route.params?.id);
       const fileName = ref('');
-      const currentKey = ref('cluster');
+      const currentKey = ref('catelogueTreeMap');
       const { setTitle } = useTabs();
       const clusterData = ref();
       const datas = ref();
       const treeData = ref();
+      const edges = ref();
 
       // 设置Tab的标题（不会影响页面标题）
       setTitle('文件数据可视化');
@@ -99,9 +101,15 @@
             clusterData,
           };
         });
+        getProjectFileEdgesList(fileId.value).then((res) => {
+          edges.value = res;
+          return {
+            edges,
+          };
+        });
       });
 
-      return { fileName, clusterData, datas, currentKey, goBack, treeData };
+      return { fileName, clusterData, currentKey, datas, edges, goBack, treeData };
     },
   });
 </script>

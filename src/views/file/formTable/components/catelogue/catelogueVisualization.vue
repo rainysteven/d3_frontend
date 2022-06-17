@@ -20,13 +20,6 @@
           :options="fileData"
           :allowClear="allowClear"
         />
-        <Select
-          v-model:value="category"
-          placeholder="选择类别"
-          style="width: 100px"
-          :options="categories"
-          :allowClear="allowClear"
-        />
       </CollapsePanel>
       <CollapsePanel key="4" header="Clusters" :force-render="forceRender">
         <div id="clusters" style="width: 310px; height: 260px"></div>
@@ -47,6 +40,9 @@
       data: {
         type: Object,
       },
+      edges: {
+        type: Object,
+      },
     },
     setup(props) {
       //TODO 导航切换data
@@ -57,33 +53,20 @@
       const fileData = ref();
       const categoryData = ref();
       const file = ref();
-      const category = ref('');
       const categories = ref();
       const searchBox = ref();
       const node = ref();
       watch(
         () => props.data,
         () => {
-          [fileData.value, categoryData.value] = getData(props.data);
+          fileData.value = getData(props.data);
           drawLegend();
           drawRootClusters(props.data);
           searchBox.value = drawChart(props.data, node);
         },
       );
       watch(file, () => {
-        category.value = '';
-        categories.value =
-          typeof file.value === 'undefined'
-            ? []
-            : categoryData.value[file.value].map((e) => ({ value: e }));
         searchBox.value(file.value);
-      });
-      watch(category, () => {
-        if (category.value !== '') {
-          searchBox.value(
-            typeof category.value !== 'undefined' ? `${file.value}/${category.value}` : file.value,
-          );
-        }
       });
       watch(node, () => {
         if (node.value.height === 1) {
@@ -95,7 +78,7 @@
       const activeKey = ref(['1']);
       const expandIconPosition = ref('right');
       onMounted(() => {
-        [fileData.value, categoryData.value] = getData(props.data);
+        fileData.value = getData(props.data);
         drawLegend();
         drawRootClusters(props.data);
         searchBox.value = drawChart(props.data, node);
@@ -104,7 +87,6 @@
         ...toRefs(property),
         file,
         fileData,
-        category,
         categories,
         categoryData,
         activeKey,

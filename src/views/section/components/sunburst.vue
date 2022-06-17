@@ -1,4 +1,4 @@
-<template>
+<template v-if="componentKey === '1'">
   <div id="chart"></div>
   <div class="panels">
     <Collapse v-model:activeKey="packageActiveKey" :expand-icon-position="expandIconPosition">
@@ -130,6 +130,7 @@
   import { CheckboxGroup, Col, Collapse, CollapsePanel, Row, Select, Switch } from 'ant-design-vue';
   import { CaretRightOutlined } from '@ant-design/icons-vue';
   import { drawChart } from './sunburst';
+  import SectionChart from './sectionEChart.vue';
   export default defineComponent({
     name: 'SectionSunburst',
     components: {
@@ -139,6 +140,7 @@
       CollapsePanel,
       CaretRightOutlined,
       Row,
+      SectionChart,
       Select,
       Switch,
     },
@@ -208,6 +210,7 @@
         zoomDisabled: () => {},
         zoomReset: () => {},
       });
+      const componentKey = ref('d3');
       const currentKey = ref('package');
       const buttonContent = computed(() => (zoomProps.disabled ? '开启zoom' : '禁止zoom'));
       const buttonDanger = computed(() => !zoomProps.disabled);
@@ -254,6 +257,7 @@
         ...toRefs(zoomProps),
         buttonContent,
         buttonDanger,
+        componentKey,
         currentKey,
         fileNames,
         handleClick,

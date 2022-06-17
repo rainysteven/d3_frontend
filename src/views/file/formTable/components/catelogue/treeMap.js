@@ -107,6 +107,7 @@ export const drawChart = function (data) {
     newNode.name = node.name;
     newNode.id = node.id;
     newNode.value = (node.value || []).slice();
+    console.log(node);
     return newNode;
   };
 

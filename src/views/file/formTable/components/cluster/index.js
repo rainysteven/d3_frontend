@@ -59,7 +59,6 @@ export const drawChart = function (temp, params) {
     .style('pointer-events', 'none');
   // 初始化
   let [data, barData] = figureData(temp);
-  console.log(data);
   const [padding, width, height] = [5, 1440, 768];
   const [centerX, centerY] = [width / 2, height / 2];
   const canvas = d3
@@ -99,7 +98,6 @@ export const drawChart = function (temp, params) {
     scale: 1,
   };
   let colToCircle = {};
-  console.log(data);
   let nodes = d3.pack().padding(3).size([diameter, diameter])(
     d3
     .hierarchy({
@@ -109,7 +107,6 @@ export const drawChart = function (temp, params) {
     .sum((d) => d.value)
     .sort((a, b) => b.value - a.value),
   );
-  console.log(nodes);
 
   // circle pack图数据
   let root = nodes,
@@ -340,7 +337,6 @@ export const drawChart = function (temp, params) {
   }
 
   function getParamsValue(node) {
-    console.log(node);
     params.value =
       node.height === 1 ?
       {
