@@ -465,7 +465,6 @@ export const drawChart = function (temp, params) {
 
   function zoomToCanvas(focusNode) {
     $('#canvas').css('pointer-events', 'none');
-    console.log(focusNode);
     if (focusNode === focus) {
       currentID = '';
     } else {

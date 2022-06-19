@@ -60,7 +60,7 @@
       // 此处可以得到用户ID
       const fileId = ref(route.params?.id);
       const fileName = ref('');
-      const currentKey = ref('catelogueTreeMap');
+      const currentKey = ref('catelogueCirclePack');
       const { setTitle } = useTabs();
       const clusterData = ref();
       const datas = ref();

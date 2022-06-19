@@ -744,7 +744,7 @@ export const drawNodeClusters = function (datas) {
   myChart.hideLoading();
   const option = {
     title: {
-      text: '代码依赖分布',
+      text: '代码依赖变更分布',
     },
     tooltip: {
       trigger: 'axis',

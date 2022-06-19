@@ -23,12 +23,12 @@
 </template>
 
 <script>
-  import { defineComponent, toRefs, watch, ref, reactive } from 'vue';
+  import { defineComponent, toRefs, watch, onMounted, ref, reactive } from 'vue';
   import { Collapse, CollapsePanel, Select } from 'ant-design-vue';
   import { CaretRightOutlined } from '@ant-design/icons-vue';
   import { draw, getData } from './EChart';
   export default defineComponent({
-    name: 'SectionChart',
+    name: 'SectionEChart',
     components: { Collapse, CollapsePanel, CaretRightOutlined, Select },
     props: {
       nodes: {
@@ -39,7 +39,6 @@
       },
     },
     setup(props) {
-      const { nodes, edges } = toRefs(props);
       const property = reactive({
         allowClear: true,
         activeKey: ['1'],
@@ -49,14 +48,14 @@
       const mode = ref();
       const modeData = ref();
       const sortNodes = ref();
-      watch(edges, () => {
-        const temp = getData(nodes.value);
+      watch(mode, () => {
+        draw(mode.value !== undefined ? mode.value : '', sortNodes.value, props.edges);
+      });
+      onMounted(() => {
+        const temp = getData(props.nodes);
         modeData.value = temp.modeData;
         sortNodes.value = temp.nodes;
-        draw('', sortNodes.value, edges.value);
-      });
-      watch(mode, () => {
-        draw(mode.value !== undefined ? mode.value : '', sortNodes.value, edges.value);
+        draw('', sortNodes.value, props.edges);
       });
       return {
         ...toRefs(property),

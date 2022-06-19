@@ -3,20 +3,24 @@ import * as echarts from 'echarts';
 import Trie from './dataStructure';
 
 export const drawChart = function (
+  componentKey,
   currentKey,
   nodes,
   edges,
   checkboxGroupProps,
+  echartsProps,
   selectProps,
   sourceProps,
   switchProps,
   zoomProps,
 ) {
   sunburst(
+    componentKey,
     currentKey,
     nodes,
     edges,
     checkboxGroupProps,
+    echartsProps,
     selectProps,
     sourceProps,
     switchProps,
@@ -34,10 +38,12 @@ const isOriColor = d3
   .range(['#9d0208', '#d00000', '#dc2f02', '#e85d04', '#f48c06', '#faa307', '#FFBA08']);
 
 const sunburst = function (
+  componentKey,
   currentKey,
   nodes,
   edges,
   checkboxGroupProps,
+  echartsProps,
   selectProps,
   sourceProps,
   switchProps,
@@ -192,7 +198,7 @@ const sunburst = function (
     return handleChange;
   })();
 
-  const tooltip = d3.select('body').append('div').attr('class', 'tooltip');
+  const tooltip = d3.select('#chart').append('div').attr('class', 'tooltip');
   const svg = d3
     .select('#chart')
     .append('svg')
@@ -405,14 +411,22 @@ const sunburst = function (
             .attr('opacity', 0.1)
             .filter((d) => idArray.indexOf(d.data.id) !== -1 || d.data.id === v.data.id)
             .attr('opacity', 1);
-          linkGroups
-            .attr('opacity', 0)
-            .filter((d) => d.source === v.data.id || d.target === v.data.id)
-            .attr('opacity', 1);
+          linkGroups.attr('opacity', 0);
+          if (idArray.length) {
+            linkGroups
+              .filter((d) => d.source === v.data.id || d.target === v.data.id)
+              .attr('opacity', 1);
+          }
+          tooltip.transition().duration(200).style('opacity', 1);
+          tooltip
+            .html(`${v.data.name}`)
+            .style('left', event.pageX + 5 + 'px')
+            .style('top', event.pageY - 28 + 'px');
         })
         .on('mouseout', () => {
           nodeGroups.attr('opacity', 1);
           linkGroups.attr('opacity', 1);
+          tooltip.transition().duration(500).style('opacity', 0);
         })
         .on('click', (event, v) => {
           let [file, isOri] = v.data.id.split('_');
@@ -434,6 +448,9 @@ const sunburst = function (
             edgeResult = edges.filter(
               (e) => idRelations.includes(e.source) && idRelations.includes(e.target),
             );
+          echartsProps.echartsNodes = nodeResult;
+          echartsProps.echartsEdges = edgeResult;
+          componentKey.value = 'echarts';
         });
     };
     const {

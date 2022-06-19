@@ -64,10 +64,11 @@ export function getBasicColumns(): BasicColumn[] {
 
 export const getAdvanceSchema = (itemNumber = 6): FormSchema[] => {
   const arr: any = [];
+  const titles: string[] = ['文件名称查询', '文件类别查询'];
   for (let index = 0; index < itemNumber; index++) {
     arr.push({
       field: `field${index}`,
-      label: `字段${index}`,
+      label: `${titles[index]}`,
       component: 'Input',
       colProps: {
         xl: 12,
@@ -82,7 +83,7 @@ export function getFormConfig(): Partial<FormProps> {
   return {
     labelWidth: 100,
     schemas: [
-      ...getAdvanceSchema(5),
+      ...getAdvanceSchema(2),
       {
         field: `field11`,
         label: `Slot示例`,

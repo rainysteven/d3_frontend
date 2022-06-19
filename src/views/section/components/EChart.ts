@@ -1,12 +1,12 @@
 import * as echarts from 'echarts';
-import { scaleOrdinal } from 'd3';
+import * as d3 from 'd3';
 
 const DATATYPES = {
   CATEGORY: ['Class', 'Interface', 'Method', 'Variable'],
   ACCESSIBILITY: ['Default', 'Private', 'Protected', 'Public'],
 };
 const SYMBOLTYPES = ['circle', 'rect', 'triangle', 'diamond'];
-const symbolScale = scaleOrdinal().domain(DATATYPES.ACCESSIBILITY).range(SYMBOLTYPES);
+const symbolScale = d3.scaleOrdinal().domain(DATATYPES.ACCESSIBILITY).range(SYMBOLTYPES);
 
 const getTooltip = function (data) {
   let str = '';
@@ -154,22 +154,17 @@ const drawLegend = function (datas) {
 };
 
 export const getData = function (datas) {
-  let nodes = [];
-  Object.values(
-    d3
-      .nest()
-      .key((e) => e.category)
-      .entries(datas),
-  ).forEach((e) => (nodes = nodes.concat(e.values)));
+  const nodes = d3
+    .groups(datas, (d) => d.category)
+    .map((d) => d[1])
+    .reduce((a, b) => a.concat(b));
   console.log(nodes);
-  const modeArr = [];
-  datas.forEach((e) => {
-    e.mode_type.forEach((d) => {
-      modeArr.push(d);
-    });
+  const modeArray = [];
+  datas.forEach((d) => {
+    modeArray.push(d.mode_type);
   });
   return {
-    modeData: [...new Set(modeArr)].map((e) => ({
+    modeData: [...new Set(modeArray)].map((e) => ({
       value: e,
     })),
     nodes,
